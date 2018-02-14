@@ -1,0 +1,172 @@
+version: '3.1'
+
+services:
+
+  accumulomaster:
+    image: renci/accumulo:1.8.1
+    depends_on:
+      - namenode
+    container_name: accumulomaster
+    volumes:
+      - hadoop-public:/home/hadoop/public
+      - ./site-files:/site-files
+    restart: always
+    hostname: accumulomaster
+    networks:
+      - accumulo
+    ports:
+      - '9995:9995'
+    environment:
+      ACCUMULO_MASTER: accumulomaster
+      IS_ACCUMULO_MASTER: 'true'
+      ACCUMULO_WORKERS: worker1 worker2
+      IS_ACCUMULO_WORKER: 'false'
+      IS_NODE_MANAGER: 'false'
+      IS_NAME_NODE: 'false'
+      IS_SECONDARY_NAME_NODE: 'false'
+      IS_DATA_NODE: 'false'
+      IS_RESOURCE_MANAGER: 'false'
+      CLUSTER_NODES: namenode resourcemanager worker1 worker2 accumulomaster
+      ZOOKEEPER_NODES: zoo1 zoo2
+
+  namenode:
+    image: renci/accumulo:1.8.1
+    depends_on:
+      - zoo1
+    container_name: namenode
+    volumes:
+      - hadoop-public:/home/hadoop/public
+      - ./site-files:/site-files
+    restart: always
+    hostname: namenode
+    networks:
+      - accumulo
+    ports:
+      - '50070:50070'
+    environment:
+      ACCUMULO_MASTER: accumulomaster
+      IS_ACCUMULO_MASTER: 'false'
+      ACCUMULO_WORKERS: worker1 worker2
+      IS_ACCUMULO_WORKER: 'false'
+      IS_NODE_MANAGER: 'false'
+      IS_NAME_NODE: 'true'
+      IS_SECONDARY_NAME_NODE: 'false'
+      IS_DATA_NODE: 'false'
+      IS_RESOURCE_MANAGER: 'false'
+      CLUSTER_NODES: namenode resourcemanager worker1 worker2 accumulomaster
+      ZOOKEEPER_NODES: zoo1 zoo2
+
+  resourcemanager:
+    image: renci/accumulo:1.8.1
+    depends_on:
+      - namenode
+    container_name: resourcemanager
+    volumes:
+      - hadoop-public:/home/hadoop/public
+      - ./site-files:/site-files
+    restart: always
+    hostname: resourcemanager
+    networks:
+      - accumulo
+    ports:
+      - '8042:8042'
+      - '8088:8088'
+    environment:
+      ACCUMULO_MASTER: accumulomaster
+      IS_ACCUMULO_MASTER: 'false'
+      ACCUMULO_WORKERS: worker1 worker2
+      IS_ACCUMULO_WORKER: 'false'
+      IS_NODE_MANAGER: 'true'
+      IS_NAME_NODE: 'false'
+      IS_SECONDARY_NAME_NODE: 'false'
+      IS_DATA_NODE: 'false'
+      IS_RESOURCE_MANAGER: 'true'
+      CLUSTER_NODES: namenode resourcemanager worker1 worker2 accumulomaster
+      ZOOKEEPER_NODES: zoo1 zoo2
+
+  worker1:
+    image: renci/accumulo:1.8.1
+    depends_on:
+      - namenode
+    container_name: worker1
+    volumes:
+      - hadoop-public:/home/hadoop/public
+      - ./site-files:/site-files
+    restart: always
+    hostname: worker1
+    networks:
+      - accumulo
+    ports:
+      - '9997:9997'
+      - '50075:50075'
+    environment:
+      ACCUMULO_MASTER: accumulomaster
+      IS_ACCUMULO_MASTER: 'false'
+      ACCUMULO_WORKERS: worker1 worker2
+      IS_ACCUMULO_WORKER: 'true'
+      IS_NODE_MANAGER: 'false'
+      IS_NAME_NODE: 'false'
+      IS_SECONDARY_NAME_NODE: 'false'
+      IS_DATA_NODE: 'true'
+      IS_RESOURCE_MANAGER: 'false'
+      CLUSTER_NODES: namenode resourcemanager worker1 worker2 accumulomaster
+      ZOOKEEPER_NODES: zoo1 zoo2
+
+  worker2:
+    image: renci/accumulo:1.8.1
+    depends_on:
+      - namenode
+    container_name: worker2
+    volumes:
+      - hadoop-public:/home/hadoop/public
+      - ./site-files:/site-files
+    restart: always
+    hostname: worker2
+    networks:
+      - accumulo
+    ports:
+      - '50076:50075'
+    environment:
+      ACCUMULO_MASTER: accumulomaster
+      IS_ACCUMULO_MASTER: 'false'
+      ACCUMULO_WORKERS: worker1 worker2
+      IS_ACCUMULO_WORKER: 'true'
+      IS_NODE_MANAGER: 'false'
+      IS_NAME_NODE: 'false'
+      IS_SECONDARY_NAME_NODE: 'false'
+      IS_DATA_NODE: 'true'
+      IS_RESOURCE_MANAGER: 'false'
+      CLUSTER_NODES: namenode resourcemanager worker1 worker2 accumulomaster
+      ZOOKEEPER_NODES: zoo1 zoo2
+
+  zoo1:
+    image: renci/zookeeper:3.4.11
+    container_name: zoo1
+    restart: always
+    hostname: zoo1
+    networks:
+      - accumulo
+    ports:
+      - 2181:2181
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888 server.2=zoo2:2888:3888
+
+  zoo2:
+    image: renci/zookeeper:3.4.11
+    container_name: zoo2
+    restart: always
+    hostname: zoo2
+    networks:
+      - accumulo
+    ports:
+      - 2182:2181
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=0.0.0.0:2888:3888
+
+networks:
+  accumulo:
+
+volumes:
+  hadoop-public:
