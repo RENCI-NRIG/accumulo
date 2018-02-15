@@ -41,7 +41,7 @@ Using the provided [`docker-compose.yml`](docker-compose.yml) file to stand up a
 
 TODO - Add diagram
 
-The nodes will use the defintions found in the [site-files](site-files) directory to configure the cluster. These files can be modified as needed to configure your cluster as needed at runtime.
+The nodes will use the definitions found in the [site-files](site-files) directory to configure the cluster. These files can be modified as needed to configure your cluster as needed at runtime.
 
 A docker volume named `hadoop-public` is also created to allow the nodes to exchange SSH key information between themselves on startup.
 
@@ -145,7 +145,6 @@ services:
     networks:
       - accumulo
     ports:
-      - '9997:9997'
       - '50075:50075'
     environment:
       ACCUMULO_MASTER: accumulomaster
@@ -220,22 +219,24 @@ volumes:
   hadoop-public:
 ```
 
-Run with docker-compose.
+### Start the cluster 
+
+Using `docker-compose`
 
 ```
 $ docker-compose up -d
 ```
 
-After a few moments the containers should be configured and running.
+After a few moments all containers will be running and should display in a `ps` call.
 
 ```
 $ docker-compose ps
-     Name                    Command               State                            Ports
--------------------------------------------------------------------------------------------------------------------
+     Name                    Command               State                           Ports
+-----------------------------------------------------------------------------------------------------------------
 accumulomaster    /usr/local/bin/tini -- /do ...   Up      22/tcp, 0.0.0.0:9995->9995/tcp
 namenode          /usr/local/bin/tini -- /do ...   Up      22/tcp, 0.0.0.0:50070->50070/tcp
 resourcemanager   /usr/local/bin/tini -- /do ...   Up      22/tcp, 0.0.0.0:8042->8042/tcp, 0.0.0.0:8088->8088/tcp
-worker1           /usr/local/bin/tini -- /do ...   Up      22/tcp, 0.0.0.0:50075->50075/tcp, 0.0.0.0:9997->9997/tcp
+worker1           /usr/local/bin/tini -- /do ...   Up      22/tcp, 0.0.0.0:50075->50075/tcp
 worker2           /usr/local/bin/tini -- /do ...   Up      22/tcp, 0.0.0.0:50076->50075/tcp
 zoo1              /usr/local/bin/tini -- /do ...   Up      0.0.0.0:2181->2181/tcp, 2888/tcp, 3888/tcp
 zoo2              /usr/local/bin/tini -- /do ...   Up      0.0.0.0:2182->2181/tcp, 2888/tcp, 3888/tcp
@@ -245,44 +246,101 @@ Since the ports of the containers were mapped to the host the various web ui's c
 
 **accumulomaster container**: AccumuloMaster Web UI on port 9995
 
-AccumuloMaster
+AccumuloMaster: [http://localhost:9995/](http://localhost:9995/)
 
 <img width="50%" alt="AccumuloMaster" src="https://user-images.githubusercontent.com/5332509/36229442-3c383efc-11a5-11e8-8e21-6b3056c3ac58.png">
 
 
 **namenode container**: NameNode Web UI on port 50070
 
-NameNode
+NameNode: [http://localhost:50070/dfshealth.html#tab-datanode](http://localhost:50070/dfshealth.html#tab-datanode)
 
 <img width="50%" alt="NameNode" src="https://user-images.githubusercontent.com/5332509/36229445-3c633fda-11a5-11e8-99ef-0e95a03cde2b.png">
 
 **resource manager container**: ResourceManager/NodeManager Web UI on ports 8088 and 8042
 
-ResourceManager
+ResourceManager: [http://localhost:8088/cluster](http://localhost:8088/cluster)
 
 <img width="50%" alt="ResourceManager" src="https://user-images.githubusercontent.com/5332509/36229443-3c4ad09e-11a5-11e8-97bc-36cd7788b98a.png">
 
-NodeManager
+NodeManager: [http://localhost:8042/node](http://localhost:8042/node)
 
 <img width="50%" alt="NodeManager" src="https://user-images.githubusercontent.com/5332509/36229444-3c56bb98-11a5-11e8-8434-f38191953528.png">
 
 **worker1 and worker2 containers**: DataNode Web UI on ports 50075 and 50076
 
-Worker1 DataManager
+Worker1 DataNode: [http://localhost:50075/datanode.html](http://localhost:50075/datanode.html)
 
-<img width="50%" alt="Worker1 DataManager" src="https://user-images.githubusercontent.com/5332509/36229446-3c736612-11a5-11e8-8c8b-359858ef0b79.png">
+<img width="50%" alt="Worker1 DataNode" src="https://user-images.githubusercontent.com/5332509/36229446-3c736612-11a5-11e8-8c8b-359858ef0b79.png">
 
-Worker2 DataManager
+Worker2 DataNode: [http://localhost:50076/datanode.html](http://localhost:50076/datanode.html)
 
-<img width="50%" alt="Worker2 DataManager" src="https://user-images.githubusercontent.com/5332509/36229447-3c7caea2-11a5-11e8-933b-964f66e79da1.png">
+<img width="50%" alt="Worker2 DataNode" src="https://user-images.githubusercontent.com/5332509/36229447-3c7caea2-11a5-11e8-933b-964f66e79da1.png">
 
+### Stop the cluster
+
+The cluster can be stopped by issuing a `stop` call.
+
+```
+$ docker-compose stop
+Stopping worker2         ... done
+Stopping accumulomaster  ... done
+Stopping worker1         ... done
+Stopping resourcemanager ... done
+Stopping namenode        ... done
+Stopping zoo1            ... done
+Stopping zoo2            ... done
+```
+
+### Restart the cluster
+
+So long as the container definitions have not been removed, the cluster can be restarted by using a `start` call.
+
+```
+$ docker-compose start
+Starting zoo1            ... done
+Starting zoo2            ... done
+Starting namenode        ... done
+Starting worker2         ... done
+Starting worker1         ... done
+Starting resourcemanager ... done
+Starting accumulomaster  ... done
+```
+
+After a few moments all cluster activity should be back to normal.
+
+### Remove the cluster
+
+The entire cluster can be removed by first stopping it, and then removing the containers from the local machine.
+
+```
+$ docker-compose stop && docker-compose rm -f
+Stopping worker1         ... done
+Stopping resourcemanager ... done
+Stopping accumulomaster  ... done
+Stopping worker2         ... done
+Stopping namenode        ... done
+Stopping zoo1            ... done
+Stopping zoo2            ... done
+Going to remove worker1, resourcemanager, accumulomaster, worker2, namenode, zoo1, zoo2
+Removing worker1         ... done
+Removing resourcemanager ... done
+Removing accumulomaster  ... done
+Removing worker2         ... done
+Removing namenode        ... done
+Removing zoo1            ... done
+Removing zoo2            ... done
+```
 
 ### References
 
-1. [https://github.com/RENCI-NRIG/exogeni-recipes/blob/master/accumulo/accumulo_exogeni_postboot.sh](https://github.com/RENCI-NRIG/exogeni-recipes/blob/master/accumulo/accumulo_exogeni_postboot.sh)
-2. Hadoop configuration files
+1. ExoGENI Accumulo: [https://github.com/RENCI-NRIG/exogeni-recipes/blob/master/accumulo/accumulo_exogeni_postboot.sh](https://github.com/RENCI-NRIG/exogeni-recipes/blob/master/accumulo/accumulo_exogeni_postboot.sh)
+2. Accumulo Docs: [https://accumulo.apache.org/1.8/accumulo_user_manual.html](https://accumulo.apache.org/1.8/accumulo_user_manual.html)
+3. Hadoop Docs: 
 	- Common: [hadoop-common/core-default.xml](http://hadoop.apache.org/docs/r2.9.0/hadoop-project-dist/hadoop-common/core-default.xml)
 	- HDFS: [hadoop-hdfs/hdfs-default.xml](http://hadoop.apache.org/docs/r2.9.0/hadoop-project-dist/hadoop-hdfs/hdfs-default.xml)
 	- MapReduce: [hadoop-mapreduce-client-core/mapred-default.xml](http://hadoop.apache.org/docs/r2.9.0/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml)
 	- Yarn: [hadoop-yarn-common/yarn-default.xml](http://hadoop.apache.org/docs/r2.9.0/hadoop-yarn/hadoop-yarn-common/yarn-default.xml)
 	- Deprecated Properties: [hadoop-common/DeprecatedProperties.html](http://hadoop.apache.org/docs/r2.9.0/hadoop-project-dist/hadoop-common/DeprecatedProperties.html)
+4. ZooKeeper Docs: [https://zookeeper.apache.org/doc/r3.4.11/zookeeperAdmin.html](https://zookeeper.apache.org/doc/r3.4.11/zookeeperAdmin.html)
+

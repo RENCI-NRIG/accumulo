@@ -97,7 +97,6 @@ services:
     networks:
       - accumulo
     ports:
-      - '9997:9997'
       - '50075:50075'
     environment:
       ACCUMULO_MASTER: accumulomaster
