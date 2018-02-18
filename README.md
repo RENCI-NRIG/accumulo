@@ -35,7 +35,7 @@ Automated builds are generated at: [https://hub.docker.com/u/renci](https://hub.
 $ docker pull renci/accumulo:1.8.1
 ```
 
-## Example
+## Example: Seven node cluster
 
 Using the provided [`docker-compose.yml`](docker-compose.yml) file to stand up a seven node Accumulo cluster that includes an `accumulomaster`, `namenode`, `resourcemanager`, two workers (`worker1` and `worker2`) and two [ZooKeeper](https://hub.docker.com/r/renci/zookeeper/) nodes (`zoo` and `zoo2`).
 
@@ -331,6 +331,43 @@ Removing namenode        ... done
 Removing zoo1            ... done
 Removing zoo2            ... done
 ```
+
+## Example: Accumulo command line
+
+**NOTE**: Assumes the cluster is running as configured in the previous example.
+
+A script named [usertable-example.sh](usertable-example.sh) will create a sample `usertable` in Accumulo using 100 randomly generated user entries using `docker exec` calls to the `accumulomaster` container.
+
+```
+$ ./usertable-example.sh
+INFO: generate splits.txt
+user5525
+user1588
+...
+user7717
+user5402
+docker cp splits.txt accumulomaster:/tmp/splits.txt
+INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "deletetable -f usertable"
+2018-02-18 04:31:54,248 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+Table: [usertable] has been deleted.
+INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "createtable usertable"
+2018-02-18 04:31:57,638 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "addsplits -t usertable -sf /tmp/splits.txt"
+2018-02-18 04:32:00,522 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "config -t usertable -s table.cache.block.enable=true"
+2018-02-18 04:32:06,503 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e tables
+2018-02-18 04:32:08,965 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+accumulo.metadata
+accumulo.replication
+accumulo.root
+trace
+usertable
+```
+
+AccumuloMaster: [http://localhost:9995/master](http://localhost:9995/master)
+
+<img width="50%" alt="AccumuloMaster usertable example" src="https://user-images.githubusercontent.com/5332509/36348341-5ddf74ba-143b-11e8-93b4-0930648e0b58.png">
 
 ### References
 

@@ -3,11 +3,13 @@ set -e
 
 # location of hadoop configuration files
 HADOOP_CONF_DIR=${HADOOP_PREFIX}/etc/hadoop
+ACCUMULO_CONF_DIR=${ACCUMULO_HOME}/conf
 CORE_SITE_FILE=${HADOOP_CONF_DIR}/core-site.xml
 HDFS_SITE_FILE=${HADOOP_CONF_DIR}/hdfs-site.xml
 MAPRED_SITE_FILE=${HADOOP_CONF_DIR}/mapred-site.xml
 YARN_SITE_FILE=${HADOOP_CONF_DIR}/yarn-site.xml
 WORKERS_FILE=${HADOOP_CONF_DIR}/slaves
+ACCUMULO_SITE_FILE=${ACCUMULO_CONF_DIR}/accumulo-site.xml
 
 # generate or use provided core-site.xml
 _core_site_xml () {
@@ -46,11 +48,11 @@ _hdfs_site_xml () {
   </property>
   <property>
     <name>dfs.name.dir</name>
-    <value>file:///home/hadoop/hadoopdata/hdfs/namenode</value>
+    <value>file:///hdfsdata/namenode</value>
   </property>
   <property>
     <name>dfs.data.dir</name>
-    <value>file:///home/hadoop/hadoopdata/hdfs/datanode</value>
+    <value>file:///hdfsdata/datanode</value>
   </property>
 </configuration>
 EOF
@@ -113,11 +115,13 @@ EOF
 _hadoop_profile() {
   cat > /etc/profile.d/hadoop.sh << EOF
 export HADOOP_USER_HOME=${HADOOP_USER_HOME}
+export HADOOP_HOME=${HADOOP_USER_HOME}/hadoop
 export HADOOP_PREFIX=${HADOOP_USER_HOME}/hadoop
 export HADOOP_INSTALL=${HADOOP_PREFIX}
 export HADOOP_MAPRED_HOME=${HADOOP_PREFIX}
 export HADOOP_COMMON_HOME=${HADOOP_PREFIX}
 export HADOOP_HDFS_HOME=${HADOOP_PREFIX}
+export JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_PREFIX}/lib/native
 export YARN_HOME=${HADOOP_PREFIX}
 export HADOOP_COMMON_LIB_NATIVE_DIR=${HADOOP_PREFIX}/lib/native
 export HADOOP_CONF_DIR=${HADOOP_PREFIX}/etc/hadoop
@@ -151,19 +155,47 @@ export ZOOKEEPER_NODES=${ZOOKEEPER_NODES}
 EOF
 }
 
+_accumulo_site_xml() {
+  if [ -f /site-files/accumulo-site.xml ]; then
+    cat /site-files/accumulo-site.xml > $ACCUMULO_SITE_FILE
+  else
+    # setup zookeeper hosts
+    for node in `echo $ZOOKEEPER_NODES`; do ZK_HOSTS=$ZK_HOSTS$node:2181,; done
+    sed -i "/localhost:2181/ s/localhost:2181/${ZK_HOSTS%?}/" ${ACCUMULO_HOME}/conf/accumulo-site.xml
+
+    # disable SASL (?) Kerberos ??
+    # this is disabled correctly by bootstrap_config.sh
+    #sed -i '/instance.rpc.sasl.enabled/!b;n;s/true/false/' ${ACCUMULO_HOME}/conf/accumulo-site.xml
+    # if the password is changed by the user, the script needs to change it here too.
+    sed -i "/<value>secret/s/secret/${ACCUMULO_PASSWORD}/" ${ACCUMULO_HOME}/conf/accumulo-site.xml
+
+    sed -i '/<name>instance.volumes<\/name>/!b;n;c\ \ \ \ <value>hdfs:\/\/namenode:9000\/accumulo<\/value>' ${ACCUMULO_HOME}/conf/accumulo-site.xml
+  fi
+  chown hadoop:hadoop $ACCUMULO_SITE_FILE
+}
+
 # set profile and check env for hadoop user
 _hadoop_profile
 _accumulo_profile
-runuser -l hadoop -c $'env'
+# runuser -l hadoop -c $'env' # debug hadoop env
 
-# start sshd daemon
-/usr/sbin/sshd -D &
+if $IS_NAME_NODE; then
+  mkdir -p /hdfsdata/namenode
+  chown -R hadoop:hadoop /hdfsdata/namenode
+fi
+if $IS_DATA_NODE; then
+  mkdir -p /hdfsdata/datanode
+  chown -R hadoop:hadoop /hdfsdata/datanode
+fi
 
 # set ownership of directory used to transfer ssh settings between nodes
 chown -R hadoop:hadoop /home/hadoop/public
 
+# start sshd daemon
+/usr/sbin/sshd -D &
+
 # update JAVA_HOME in hadoop-env
-runuser -l hadoop -c $'sed -i \'s!# export JAVA_HOME=!export JAVA_HOME=/usr/java/default/jre/bin!\' /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh'
+runuser -l hadoop -c $'sed -i \'s:export JAVA_HOME=.*:export JAVA_HOME=/usr/java/jdk1.8.0_161/jre:\' /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh'
 
 # set haddop configuration files
 _core_site_xml
@@ -178,7 +210,7 @@ IS_FIRST_RUN=$(if [ ! -f "/home/hadoop/.ssh/id_rsa.pub" ]; then echo 'true'; els
 # NameNode to set the ssh keys used by all containers
 if $IS_NAME_NODE; then
   if $IS_FIRST_RUN; then
-    echo "NameNode copy ssh"
+  echo "NameNode copy ssh"
     _generate_ssh_keys
     cp -r /home/hadoop/.ssh /home/hadoop/public/
   fi
@@ -187,10 +219,12 @@ else
     echo "waiting for /home/hadoop/public/.ssh"
     sleep 2
   done
-  echo "COPY: .ssh from namenode to $(hostname)"
-  cp -rf /home/hadoop/public/.ssh /home/hadoop/
-  cat /home/hadoop/.ssh/id_rsa.pub >> /home/hadoop/.ssh/authorized_keys
-  chown -R hadoop:hadoop /home/hadoop/.ssh
+  if $IS_FIRST_RUN; then
+    echo "COPY: .ssh from namenode to $(hostname)"
+    cp -rf /home/hadoop/public/.ssh /home/hadoop/
+    cat /home/hadoop/.ssh/id_rsa.pub >> /home/hadoop/.ssh/authorized_keys
+    chown -R hadoop:hadoop /home/hadoop/.ssh
+  fi
 fi
 
 # Register all other cluster nodes in known_hosts
@@ -251,18 +285,10 @@ if $IS_FIRST_RUN; then
     echo $node >> ${ACCUMULO_HOME}/conf/slaves
   done
 
+  _accumulo_site_xml
+
   # Need monitor to bind to public port
   sed -i "/ACCUMULO_MONITOR_BIND_ALL/ s/^# //" ${ACCUMULO_HOME}/conf/accumulo-env.sh
-
-  # setup zookeeper hosts
-  for node in `echo $ZOOKEEPER_NODES`; do ZK_HOSTS=$ZK_HOSTS$node:2181,; done
-  sed -i "/localhost:2181/ s/localhost:2181/${ZK_HOSTS%?}/" ${ACCUMULO_HOME}/conf/accumulo-site.xml
-
-  # disable SASL (?) Kerberos ??
-  # this is disabled correctly by bootstrap_config.sh
-  #sed -i '/instance.rpc.sasl.enabled/!b;n;s/true/false/' ${ACCUMULO_HOME}/conf/accumulo-site.xml
-  # if the password is changed by the user, the script needs to change it here too.
-  sed -i "/<value>secret/s/secret/${ACCUMULO_PASSWORD}/" ${ACCUMULO_HOME}/conf/accumulo-site.xml
 fi
 
 if $IS_ACCUMULO_MASTER; then

@@ -33,10 +33,6 @@ RUN curl -o hadoop-$HADOOP_VERSION.tar.gz "https://archive.apache.org/dist/hadoo
     && rm -f hadoop-HADOOP_VERSION.tar.gz \
     && yum clean all
 
-RUN mkdir -p /home/hadoop/hdfs/namenode \
-    && mkdir -p /home/hadoop/hdfs/datanode \
-    && mkdir -p /home/hadoop/public
-
 WORKDIR /root/
 USER root
 RUN ssh-keygen -q -N '' -t rsa -f /root/.ssh/id_rsa \
@@ -80,7 +76,7 @@ ENV ACCUMULO_VERSION=${ACCUMULO_VERSION} \
   ZOOKEEPER_HOME=/home/hadoop/zookeeper \
   ZOOKEEPER_NODES=''
 
-VOLUME ["/site-files"]
+VOLUME ["/site-files", "/home/hadoop/public"]
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY zookeeper-${ZOOKEEPER_VERSION}.jar /home/hadoop/zookeeper/zookeeper-${ZOOKEEPER_VERSION}.jar
