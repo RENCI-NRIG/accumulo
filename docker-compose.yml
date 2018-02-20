@@ -69,14 +69,13 @@ services:
     networks:
       - accumulo
     ports:
-      - '8042:8042'
       - '8088:8088'
     environment:
       ACCUMULO_MASTER: accumulomaster
       IS_ACCUMULO_MASTER: 'false'
       ACCUMULO_WORKERS: worker1 worker2
       IS_ACCUMULO_WORKER: 'false'
-      IS_NODE_MANAGER: 'true'
+      IS_NODE_MANAGER: 'false'
       IS_NAME_NODE: 'false'
       IS_SECONDARY_NAME_NODE: 'false'
       IS_DATA_NODE: 'false'
@@ -97,13 +96,14 @@ services:
     networks:
       - accumulo
     ports:
+      - '8042:8042'
       - '50075:50075'
     environment:
       ACCUMULO_MASTER: accumulomaster
       IS_ACCUMULO_MASTER: 'false'
       ACCUMULO_WORKERS: worker1 worker2
       IS_ACCUMULO_WORKER: 'true'
-      IS_NODE_MANAGER: 'false'
+      IS_NODE_MANAGER: 'true'
       IS_NAME_NODE: 'false'
       IS_SECONDARY_NAME_NODE: 'false'
       IS_DATA_NODE: 'true'
@@ -124,13 +124,14 @@ services:
     networks:
       - accumulo
     ports:
+      - '8043:8042'
       - '50076:50075'
     environment:
       ACCUMULO_MASTER: accumulomaster
       IS_ACCUMULO_MASTER: 'false'
       ACCUMULO_WORKERS: worker1 worker2
       IS_ACCUMULO_WORKER: 'true'
-      IS_NODE_MANAGER: 'false'
+      IS_NODE_MANAGER: 'true'
       IS_NAME_NODE: 'false'
       IS_SECONDARY_NAME_NODE: 'false'
       IS_DATA_NODE: 'true'

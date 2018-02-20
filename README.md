@@ -39,7 +39,9 @@ $ docker pull renci/accumulo:1.8.1
 
 Using the provided [`docker-compose.yml`](docker-compose.yml) file to stand up a seven node Accumulo cluster that includes an `accumulomaster`, `namenode`, `resourcemanager`, two workers (`worker1` and `worker2`) and two [ZooKeeper](https://hub.docker.com/r/renci/zookeeper/) nodes (`zoo` and `zoo2`).
 
-TODO - Add diagram
+Accumulo docker network and port mappings (specific network values subject to change based on system):
+
+<img width="80%" alt="Accumulo Docker Network" src="https://user-images.githubusercontent.com/5332509/36406332-0b9dcda2-15c4-11e8-9c9c-485f98fa6ac3.png">
 
 The nodes will use the definitions found in the [site-files](site-files) directory to configure the cluster. These files can be modified as needed to configure your cluster as needed at runtime.
 
@@ -117,14 +119,13 @@ services:
     networks:
       - accumulo
     ports:
-      - '8042:8042'
       - '8088:8088'
     environment:
       ACCUMULO_MASTER: accumulomaster
       IS_ACCUMULO_MASTER: 'false'
       ACCUMULO_WORKERS: worker1 worker2
       IS_ACCUMULO_WORKER: 'false'
-      IS_NODE_MANAGER: 'true'
+      IS_NODE_MANAGER: 'false'
       IS_NAME_NODE: 'false'
       IS_SECONDARY_NAME_NODE: 'false'
       IS_DATA_NODE: 'false'
@@ -145,13 +146,14 @@ services:
     networks:
       - accumulo
     ports:
+      - '8042:8042'
       - '50075:50075'
     environment:
       ACCUMULO_MASTER: accumulomaster
       IS_ACCUMULO_MASTER: 'false'
       ACCUMULO_WORKERS: worker1 worker2
       IS_ACCUMULO_WORKER: 'true'
-      IS_NODE_MANAGER: 'false'
+      IS_NODE_MANAGER: 'true'
       IS_NAME_NODE: 'false'
       IS_SECONDARY_NAME_NODE: 'false'
       IS_DATA_NODE: 'true'
@@ -172,13 +174,14 @@ services:
     networks:
       - accumulo
     ports:
+      - '8043:8042'
       - '50076:50075'
     environment:
       ACCUMULO_MASTER: accumulomaster
       IS_ACCUMULO_MASTER: 'false'
       ACCUMULO_WORKERS: worker1 worker2
       IS_ACCUMULO_WORKER: 'true'
-      IS_NODE_MANAGER: 'false'
+      IS_NODE_MANAGER: 'true'
       IS_NAME_NODE: 'false'
       IS_SECONDARY_NAME_NODE: 'false'
       IS_DATA_NODE: 'true'
@@ -248,34 +251,34 @@ Since the ports of the containers were mapped to the host the various web ui's c
 
 AccumuloMaster: [http://localhost:9995/](http://localhost:9995/)
 
-<img width="50%" alt="AccumuloMaster" src="https://user-images.githubusercontent.com/5332509/36229442-3c383efc-11a5-11e8-8e21-6b3056c3ac58.png">
+<img width="50%" alt="AccumuloMaster" src="https://user-images.githubusercontent.com/5332509/36404389-513946c2-15b8-11e8-9289-3c13647a536a.png">
 
 
 **namenode container**: NameNode Web UI on port 50070
 
 NameNode: [http://localhost:50070/dfshealth.html#tab-datanode](http://localhost:50070/dfshealth.html#tab-datanode)
 
-<img width="50%" alt="NameNode" src="https://user-images.githubusercontent.com/5332509/36229445-3c633fda-11a5-11e8-99ef-0e95a03cde2b.png">
+<img width="50%" alt="NameNode" src="https://user-images.githubusercontent.com/5332509/36404476-d9f6194a-15b8-11e8-8926-5814c17b9993.png">
 
-**resource manager container**: ResourceManager/NodeManager Web UI on ports 8088 and 8042
+**resource manager container**: ResourceManager Web UI on ports 8088
 
 ResourceManager: [http://localhost:8088/cluster](http://localhost:8088/cluster)
 
-<img width="50%" alt="ResourceManager" src="https://user-images.githubusercontent.com/5332509/36229443-3c4ad09e-11a5-11e8-97bc-36cd7788b98a.png">
+<img width="50%" alt="ResourceManager" src="https://user-images.githubusercontent.com/5332509/36404403-769dbd80-15b8-11e8-953b-6f1719e57c25.png">
 
-NodeManager: [http://localhost:8042/node](http://localhost:8042/node)
+**worker1 and worker2 containers**: DataNode Web UI on ports 50075 and 50076, NodeManager on 8042 and 8043
 
-<img width="50%" alt="NodeManager" src="https://user-images.githubusercontent.com/5332509/36229444-3c56bb98-11a5-11e8-8434-f38191953528.png">
+DataNode (worker1): [http://localhost:50075/datanode.html](http://localhost:50075/datanode.html)
 
-**worker1 and worker2 containers**: DataNode Web UI on ports 50075 and 50076
+<img width="50%" alt="Worker1 DataManager" src="https://user-images.githubusercontent.com/5332509/36404500-041ed932-15b9-11e8-8994-b51991f8106b.png">
 
-Worker1 DataNode: [http://localhost:50075/datanode.html](http://localhost:50075/datanode.html)
+NodeManager (worker1): [http://localhost:8042/node](http://localhost:8042/node)
 
-<img width="50%" alt="Worker1 DataNode" src="https://user-images.githubusercontent.com/5332509/36229446-3c736612-11a5-11e8-8c8b-359858ef0b79.png">
+<img width="50%" alt="NodeManager" src="https://user-images.githubusercontent.com/5332509/36404443-ad358472-15b8-11e8-8865-a2f1abdeea36.png">
 
-Worker2 DataNode: [http://localhost:50076/datanode.html](http://localhost:50076/datanode.html)
+DataNode (worker2): [http://localhost:50076/datanode.html](http://localhost:50076/datanode.html)
 
-<img width="50%" alt="Worker2 DataNode" src="https://user-images.githubusercontent.com/5332509/36229447-3c7caea2-11a5-11e8-933b-964f66e79da1.png">
+<img width="50%" alt="Worker2 DataManager" src="https://user-images.githubusercontent.com/5332509/36404524-25c017ea-15b9-11e8-9901-40319cde3750.png">
 
 ### Stop the cluster
 
@@ -336,28 +339,36 @@ Removing zoo2            ... done
 
 **NOTE**: Assumes the cluster is running as configured in the previous example.
 
-A script named [usertable-example.sh](usertable-example.sh) will create a sample `usertable` in Accumulo using 100 randomly generated user entries using `docker exec` calls to the `accumulomaster` container.
+A script named [usertable-example.sh](usertable-example.sh) will create a sample `usertable` in Accumulo using 100 randomly generated user entries. Calls to the `accumulomaster` container are made using `docker exec`.
+
+The user can also invoke the accumulo shell with the following command.
+
+```
+$ docker exec -ti accumulomaster runuser -l hadoop -c '${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret'
+```
+
+Running usertable-example.sh:
 
 ```
 $ ./usertable-example.sh
 INFO: generate splits.txt
-user5525
-user1588
+user2630
+user6754
 ...
-user7717
-user5402
+user1279
+user2634
 docker cp splits.txt accumulomaster:/tmp/splits.txt
 INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "deletetable -f usertable"
-2018-02-18 04:31:54,248 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
-Table: [usertable] has been deleted.
+2018-02-19 15:35:10,017 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+2018-02-19 15:35:10,211 [shell.Shell] ERROR: org.apache.accumulo.core.client.TableNotFoundException: Table usertable does not exist
 INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "createtable usertable"
-2018-02-18 04:31:57,638 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+2018-02-19 15:35:13,920 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
 INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "addsplits -t usertable -sf /tmp/splits.txt"
-2018-02-18 04:32:00,522 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+2018-02-19 15:35:17,697 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
 INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e "config -t usertable -s table.cache.block.enable=true"
-2018-02-18 04:32:06,503 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+2018-02-19 15:35:25,261 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
 INFO: ${ACCUMULO_HOME}/bin/accumulo shell -u root -p secret -e tables
-2018-02-18 04:32:08,965 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
+2018-02-19 15:35:28,434 [trace.DistributedTrace] INFO : SpanReceiver org.apache.accumulo.tracer.ZooTraceClient was loaded successfully.
 accumulo.metadata
 accumulo.replication
 accumulo.root
@@ -367,7 +378,7 @@ usertable
 
 AccumuloMaster: [http://localhost:9995/master](http://localhost:9995/master)
 
-<img width="50%" alt="AccumuloMaster usertable example" src="https://user-images.githubusercontent.com/5332509/36348341-5ddf74ba-143b-11e8-93b4-0930648e0b58.png">
+<img width="50%" alt="AccumuloMaster usertable example" src="https://user-images.githubusercontent.com/5332509/36385949-336428fc-1562-11e8-96dd-6deedd76e2ab.png">
 
 ### References
 
