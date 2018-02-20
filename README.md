@@ -39,9 +39,9 @@ $ docker pull renci/accumulo:1.8.1
 
 Using the provided [`docker-compose.yml`](docker-compose.yml) file to stand up a seven node Accumulo cluster that includes an `accumulomaster`, `namenode`, `resourcemanager`, two workers (`worker1` and `worker2`) and two [ZooKeeper](https://hub.docker.com/r/renci/zookeeper/) nodes (`zoo` and `zoo2`).
 
-Accumulo docker network and port mappings (specific network values subject to change based on system):
+Accumulo docker network and container port mapping (specific network values subject to change based on system):
 
-<img width="80%" alt="Accumulo Docker Network" src="https://user-images.githubusercontent.com/5332509/36406332-0b9dcda2-15c4-11e8-9c9c-485f98fa6ac3.png">
+<img width="80%" alt="Accumulo Docker Network" src="https://user-images.githubusercontent.com/5332509/36426229-6b414812-1617-11e8-8527-5dfd96665d77.png">
 
 The nodes will use the definitions found in the [site-files](site-files) directory to configure the cluster. These files can be modified as needed to configure your cluster as needed at runtime.
 
